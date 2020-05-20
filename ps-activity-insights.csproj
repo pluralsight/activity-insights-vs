@@ -46,6 +46,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="OpenPSActivityInsightsDashboard.cs" />
     <Compile Include="Event.cs" />
     <Compile Include="InstallFile.cs" />
     <Compile Include="Logger.cs" />

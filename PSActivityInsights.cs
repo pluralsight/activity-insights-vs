@@ -81,6 +81,7 @@ namespace ps_activity_insights
                 }
             });
             await RegisterPSActivityInsightsCommand.InitializeAsync(this);
+            await OpenPSActivityInsightsDashboard.InitializeAsync(this);
         }
 
         private InstallFile CheckInstallStatus(string filePath)
@@ -159,6 +160,29 @@ namespace ps_activity_insights
             } else
             {
                 eventList.Add(e);
+            }
+        }
+
+        public void OpenDashboard()
+        {
+            System.Diagnostics.Process process = new System.Diagnostics.Process();
+            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
+            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                CreateNoWindow = true,
+                FileName = "cmd.exe",
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                Arguments = $"/C {executablePath} dashboard"
+            };
+            process.StartInfo = startInfo;
+            process.Start();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                logger.Error($"Dashboard opening process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
             }
         }
 
