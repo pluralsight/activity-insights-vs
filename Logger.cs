@@ -1,25 +1,29 @@
-﻿using log4net;
-using log4net.Appender;
-using log4net.Core;
-using log4net.Layout;
-using log4net.Repository.Hierarchy;
-using System;
-using System.IO;
-
-namespace ps_activity_insights
+﻿namespace ps_activity_insights
 {
+    using System;
+    using System.IO;
+    using log4net;
+    using log4net.Appender;
+    using log4net.Core;
+    using log4net.Layout;
+    using log4net.Repository.Hierarchy;
+
     public class Logger
     {
         public static void Setup()
         {
             Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
 
-            PatternLayout patternLayout = new PatternLayout();
-            patternLayout.ConversionPattern = "%utcdate [%thread] %-5level %logger - %message%newline";
+            PatternLayout patternLayout = new PatternLayout
+            {
+                ConversionPattern = "%utcdate [%thread] %-5level %logger - %message%newline"
+            };
             patternLayout.ActivateOptions();
 
-            RollingFileAppender roller = new RollingFileAppender();
-            roller.AppendToFile = true;
+            RollingFileAppender roller = new RollingFileAppender
+            {
+                AppendToFile = true
+            };
             var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var pluralsightDir = Path.Combine(homeDir, ".pluralsight");
             var logFile = Path.Combine(pluralsightDir, "vs-extension.logs");

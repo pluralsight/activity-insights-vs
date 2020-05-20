@@ -47,7 +47,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="OpenPSActivityInsightsDashboard.cs" />
-    <Compile Include="Event.cs" />
+    <Compile Include="Event.cs">
+      <ExcludeFromStyleCop>True</ExcludeFromStyleCop>
+    </Compile>
     <Compile Include="InstallFile.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -1,12 +1,12 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Windows;
-using log4net;
-using Microsoft.VisualStudio.Shell;
-using Task = System.Threading.Tasks.Task;
-
-namespace ps_activity_insights
+﻿namespace ps_activity_insights
 {
+    using System;
+    using System.ComponentModel.Design;
+    using System.Windows;
+    using log4net;
+    using Microsoft.VisualStudio.Shell;
+    using Task = System.Threading.Tasks.Task;
+
     internal sealed class RegisterPSActivityInsightsCommand
     {
         public const int CommandId = 4129;
@@ -43,7 +43,7 @@ namespace ps_activity_insights
         {
             try
             {
-                logger.Info("Registering user from Tools menu");
+                this.logger.Info("Registering user from Tools menu");
                 var message = "Register this device to see your Pluralsight Activity Insights metrics.";
                 var label = "Register New Device";
                 MessageBoxResult res = MessageBox.Show(message, label, MessageBoxButton.OKCancel, MessageBoxImage.Question);
@@ -62,7 +62,7 @@ namespace ps_activity_insights
                 }
             } catch (Exception ex)
             {
-                logger.Error(ex);
+                this.logger.Error(ex);
             }
         }
     }

@@ -1,12 +1,12 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Windows;
-using log4net;
-using Microsoft.VisualStudio.Shell;
-using Task = System.Threading.Tasks.Task;
-
-namespace ps_activity_insights
+﻿namespace ps_activity_insights
 {
+    using System;
+    using System.ComponentModel.Design;
+    using System.Windows;
+    using log4net;
+    using Microsoft.VisualStudio.Shell;
+    using Task = System.Threading.Tasks.Task;
+
     internal sealed class OpenPSActivityInsightsDashboard
     {
         public const int CommandId = 4130;
@@ -58,7 +58,7 @@ namespace ps_activity_insights
             }
             catch (Exception ex)
             {
-                logger.Error(ex);
+                this.logger.Error(ex);
             }
         }
     }

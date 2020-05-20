@@ -1,38 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Threading;
-using EnvDTE;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
-using Task = System.Threading.Tasks.Task;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Windows;
-using Timer = System.Threading.Timer;
-using Window = EnvDTE.Window;
-using System.IO;
-using log4net;
-
-namespace ps_activity_insights
+﻿namespace ps_activity_insights
 {
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Runtime.InteropServices;
+    using System.Text.Json.Serialization;
+    using System.Text.Json;
+    using System.Threading;
+    using System.Windows;
+    using System;
+    using EnvDTE;
+    using Microsoft.VisualStudio.Shell.Interop;
+    using Microsoft.VisualStudio.Shell;
+    using Task = System.Threading.Tasks.Task;
+    using Timer = System.Threading.Timer;
+    using Window = EnvDTE.Window;
+    using log4net;
+
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
     [ProvideAutoLoad(UIContextGuids.SolutionExists, flags: PackageAutoLoadFlags.BackgroundLoad)]
-    [ProvideAutoLoad(AUTOLOAD_GUID_FOR_NON_SOLUTIONS, flags: PackageAutoLoadFlags.BackgroundLoad)]
+    [ProvideAutoLoad(AutoloadGuidForNonSolutions, flags: PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
+
     public sealed class PSActivityInsights : AsyncPackage
     {
-        const string AUTOLOAD_GUID_FOR_NON_SOLUTIONS = "4646B819-1AE0-4E79-97F4-8A8176FDD664";
+        const string AutoloadGuidForNonSolutions = "4646B819-1AE0-4E79-97F4-8A8176FDD664";
         public const string PackageGuidString = "c5214e54-d0f1-48d2-8158-fc00b6c64519";
-        private List<Event> eventList = new List<Event>();
+        private readonly int cacheBustTime = 60000;
+        private readonly List<Event> eventList = new List<Event>();
         private Timer timer;
         private TextEditorEvents textEditorEvents;
         private DTEEvents dteEvents;
         private BuildEvents buildEvents;
         private DocumentEvents documentEvents;
-        private HashSet<String> eventCache = new HashSet<string>();
         private ILog logger;
+        private string lastFile = null;
+        private long? lastFileTime = null;
 
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
@@ -122,7 +125,7 @@ namespace ps_activity_insights
 
             if (process.ExitCode != 0)
             {
-                logger.Error($"Register process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
+                this.logger.Error($"Register process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
             }
         }
 
@@ -130,36 +133,37 @@ namespace ps_activity_insights
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+            this.timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
             if (await GetServiceAsync(typeof(DTE)) is DTE dte)
             {
                 Events events = dte.Events;
 
                 WindowEvents windowEvents = events.WindowEvents;
-                windowEvents.WindowActivated += OnActiveDocumentChanged;
+                windowEvents.WindowActivated += this.OnActiveDocumentChanged;
 
-                dteEvents = events.DTEEvents;
-                dteEvents.OnBeginShutdown += OnBeginShutdown;
+                this.dteEvents = events.DTEEvents;
+                this.dteEvents.OnBeginShutdown += this.OnBeginShutdown;
 
-                textEditorEvents = events.TextEditorEvents;
-                textEditorEvents.LineChanged += OnLineChanged;
+                this.textEditorEvents = events.TextEditorEvents;
+                this.textEditorEvents.LineChanged += this.OnLineChanged;
 
-                buildEvents = events.BuildEvents;
-                buildEvents.OnBuildDone += OnBuildDone;
+                this.buildEvents = events.BuildEvents;
+                this.buildEvents.OnBuildDone += this.OnBuildDone;
 
-                documentEvents = events.DocumentEvents;
-                documentEvents.DocumentSaved += OnDocumentSaved;
+                this.documentEvents = events.DocumentEvents;
+                this.documentEvents.DocumentSaved += this.OnDocumentSaved;
             }
         }
 
-        private void addEventToBatch(Event e)
+        private void AddEventToBatch(Event e)
         {
-            if (e.eventType is eventType.Shutdown)
+            if (e.EventType is EventType.Shutdown)
             {
-                SendBatch();
-            } else
+                this.SendBatch();
+            }
+            else
             {
-                eventList.Add(e);
+                this.eventList.Add(e);
             }
         }
 
@@ -182,19 +186,18 @@ namespace ps_activity_insights
 
             if (process.ExitCode != 0)
             {
-                logger.Error($"Dashboard opening process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
+                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
             }
         }
 
         private void SendBatch()
         {
-            if (eventList.Count == 0) return;
+            if (this.eventList.Count == 0) return;
 
             JsonSerializerOptions options = new JsonSerializerOptions();
             options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-            var serialized = JsonSerializer.Serialize(eventList, options);
-            eventList.Clear();
-            eventCache.Clear();
+            var serialized = JsonSerializer.Serialize(this.eventList, options);
+            this.eventList.Clear();
 
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
@@ -216,18 +219,18 @@ namespace ps_activity_insights
 
             if (process.ExitCode != 0)
             {
-                logger.Error($"Sending pulses exited with nonzero exit code.\n{process.StandardError.ReadToEnd()}");
+                this.logger.Error($"Sending pulses exited with nonzero exit code.\n{process.StandardError.ReadToEnd()}");
             }
         }
 
-        private void handleEvent(Event e)
+        private void HandleEvent(Event e)
         {
-            if (eventCache.Add($"{e.eventType.ToString()}{e.filePath}")) addEventToBatch(e);
+            this.AddEventToBatch(e);
         }
 
-        private void OnBuildDone(vsBuildScope Scope, vsBuildAction Action)
+        private void OnBuildDone(vsBuildScope scope, vsBuildAction action)
         {
-            handleEvent(new Event(eventType.BuildDone));
+            this.HandleEvent(new Event(EventType.BuildDone));
         }
 
         private void OnDocumentSaved(Document document)
@@ -239,15 +242,15 @@ namespace ps_activity_insights
                 if (document != null)
                 {
                     var filePath = document.FullName;
-                    handleEvent(new Event(eventType.SaveFile, filePath));
+                    HandleEvent(new Event(EventType.SaveFile, filePath));
                 }
             });
         }
 
         private void OnBeginShutdown()
         {
-            handleEvent(new Event(eventType.Shutdown));
-            logger.Info("Beginning IDE shutdown");
+            this.HandleEvent(new Event(EventType.Shutdown));
+            this.logger.Info("Beginning IDE shutdown");
         }
 
         private void OnLineChanged(TextPoint start, TextPoint end, int hint)
@@ -260,11 +263,24 @@ namespace ps_activity_insights
                     if (dte.ActiveDocument is Document document)
                     {
                         var filePath = document.FullName;
-                        handleEvent(new Event(eventType.Typing, filePath));
+                        var e = new Event(EventType.Typing, filePath);
+
+                        if (e.FilePath != this.lastFile || this.EnoughTimePassed(e))
+                        {
+                            this.lastFile = filePath;
+                            this.lastFileTime = e.EventDate;
+                            HandleEvent(e);
+                        }
                     }
                 }
             });
         }
+
+        private bool EnoughTimePassed(Event e)
+        {
+            return (e.EventDate - this.lastFileTime) > this.cacheBustTime;
+        }
+
         private void OnActiveDocumentChanged(Window getFocus, Window lostFocus)
         {
             JoinableTaskFactory.RunAsync(async () =>
@@ -275,7 +291,7 @@ namespace ps_activity_insights
                 if (document != null)
                 {
                     var filePath = document.FullName;
-                    handleEvent(new Event(eventType.ChangeTab, filePath));
+                    HandleEvent(new Event(EventType.ChangeTab, filePath));
                 }
             });
         }

@@ -1,33 +1,40 @@
-﻿
-using System;
-
-namespace ps_activity_insights
+﻿namespace ps_activity_insights
 {
-    public enum eventType { BuildDone, ChangeTab, SaveFile, Shutdown, Typing };
+    using System;
+    public enum EventType
+    {
+        BuildDone,
+        ChangeTab,
+        SaveFile,
+        Shutdown,
+        Typing
+    };
+
     public class Event
     {
-        public eventType eventType { get; set; }
-        public string filePath { get; set; } = "N/A";
-        public Int64 eventDate { get; set; }
-        public string editor { get; set; } = "Visual Studio";
+        public EventType EventType { get; set; }
+        public string FilePath { get; set; } = "N/A";
+        public long EventDate { get; set; }
+        public string Editor { get; set; } = "Visual Studio";
 
-        public Event(eventType type, string filePath)
+        public Event(EventType type, string filePath)
         {
-            this.eventType = type;
-            this.filePath = filePath;
-            getUnixTimestamp();
-        }
-        public Event(eventType type)
-        {
-            this.eventType = type;
-            getUnixTimestamp();
+            this.EventType = type;
+            this.FilePath = filePath;
+            GetUnixTimestamp();
         }
 
-        private void getUnixTimestamp()
+        public Event(EventType type)
+        {
+            this.EventType = type;
+            GetUnixTimestamp();
+        }
+
+        private void GetUnixTimestamp()
         {
             var now = DateTime.Now;
             var unixTimestamp = ((DateTimeOffset)now).ToUnixTimeMilliseconds();
-            this.eventDate = unixTimestamp;
+            this.EventDate = unixTimestamp;
         }
     }
 }
