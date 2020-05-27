@@ -1,4 +1,4 @@
-# Pluralsight Activity Insighta
+# Pluralsight Activity Insights
 
 Visual Studio extension for Pluralsight Activity Insights, interfacing with the [Activity Insights CLI](https://github.com/ps-dev/activity-insights-cli).
 It populates your coding activity on the [Activity Insights Dashboard](https://app.pluralsight.com/activity-insights-beta) so you
