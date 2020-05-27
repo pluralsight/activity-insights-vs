@@ -3,8 +3,9 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Runtime.InteropServices;
-    using System.Text.Json.Serialization;
-    using System.Text.Json;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Serialization;
+    using Newtonsoft.Json.Converters;
     using System.Threading;
     using System.Windows;
     using System;
@@ -28,6 +29,15 @@
         public const string PackageGuidString = "c5214e54-d0f1-48d2-8158-fc00b6c64519";
         private readonly int cacheBustTime = 60000;
         private readonly List<Event> eventList = new List<Event>();
+        private readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
+        {
+            ContractResolver = new DefaultContractResolver
+            {
+                NamingStrategy = new CamelCaseNamingStrategy()
+            },
+            Converters = new List<JsonConverter> { new StringEnumConverter { CamelCaseText = true, AllowIntegerValues = false } }
+        };
+
         private Timer timer;
         private TextEditorEvents textEditorEvents;
         private DTEEvents dteEvents;
@@ -193,10 +203,7 @@
         private void SendBatch()
         {
             if (this.eventList.Count == 0) return;
-
-            JsonSerializerOptions options = new JsonSerializerOptions();
-            options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-            var serialized = JsonSerializer.Serialize(this.eventList, options);
+            var serialized = JsonConvert.SerializeObject(this.eventList, this.jsonSettings);
             this.eventList.Clear();
 
             System.Diagnostics.Process process = new System.Diagnostics.Process();
