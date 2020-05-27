@@ -16,7 +16,7 @@ a just a few small guidelines you need to follow.
      branch to work in.  It's important that each group of changes be done in
      separate branches in order to ensure that a pull request only includes the
      commits related to that bug or feature.
-     
+
   3. All contributions must be licensed Apache 2.0 and all files must have
      a copy of the boilerplate licence comment (can be copied from an existing
      file.
