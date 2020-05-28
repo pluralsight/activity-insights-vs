@@ -4,7 +4,7 @@ Visual Studio extension for Pluralsight Activity Insights, interfacing with the 
 It populates your coding activity on the [Activity Insights Dashboard](https://app.pluralsight.com/activity-insights-beta) so you
 can better understand your day.
 
-Currently supports Visual Studio 2019, 2017 and 2015.
+Currently supports Visual Studio 2019 and 2017.
 
 ## Installation
 
