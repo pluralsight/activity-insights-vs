@@ -16,6 +16,7 @@
     using Timer = System.Threading.Timer;
     using Window = EnvDTE.Window;
     using log4net;
+    using System.Collections.Concurrent;
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
@@ -28,7 +29,7 @@
         const string AutoloadGuidForNonSolutions = "4646B819-1AE0-4E79-97F4-8A8176FDD664";
         public const string PackageGuidString = "c5214e54-d0f1-48d2-8158-fc00b6c64519";
         private readonly int cacheBustTime = 60000;
-        private readonly List<Event> eventList = new List<Event>();
+        private ConcurrentQueue<Event> eventList = new ConcurrentQueue<Event>();
         private readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
         {
             ContractResolver = new DefaultContractResolver
@@ -173,7 +174,7 @@
             }
             else
             {
-                this.eventList.Add(e);
+                this.eventList.Enqueue(e);
             }
         }
 
@@ -203,8 +204,9 @@
         private void SendBatch()
         {
             if (this.eventList.Count == 0) return;
-            var serialized = JsonConvert.SerializeObject(this.eventList, this.jsonSettings);
-            this.eventList.Clear();
+
+            var lastQueue = Interlocked.Exchange(ref this.eventList, new ConcurrentQueue<Event>());
+            var serialized = JsonConvert.SerializeObject(lastQueue, this.jsonSettings);
 
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;

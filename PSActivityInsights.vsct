@@ -27,7 +27,7 @@
       <Button guid="guidPSActivityInsightsCmdSet" id="cmdidRegisterPSActivityInsightsCommand" priority="0x0100" type="Button">
         <Parent guid="guidPSActivityInsightsCmdSet" id="SubMenuGroup" />
         <Strings>
-          <ButtonText>Register Device.</ButtonText>
+          <ButtonText>Register Device</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidPSActivityInsightsCmdSet" id="cmdidOpenPSActivityInsightsDashboard" priority="0x0100" type="Button">
