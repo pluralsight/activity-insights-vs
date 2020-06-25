@@ -119,24 +119,11 @@
 
         public void RegisterUser()
         {
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
-            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
-            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                CreateNoWindow = true,
-                FileName = "cmd.exe",
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                Arguments = $"/C {executablePath} register"
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-            process.WaitForExit();
+            var result = this.ExecuteCommand("register");
 
-            if (process.ExitCode != 0)
+            if (result.ExitCode != 0)
             {
-                this.logger.Error($"Register process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
+                this.logger.Error($"Register process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
             }
         }
 
@@ -180,24 +167,11 @@
 
         public void OpenDashboard()
         {
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
-            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
-            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                CreateNoWindow = true,
-                FileName = "cmd.exe",
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                Arguments = $"/C {executablePath} dashboard"
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-            process.WaitForExit();
+            var result = this.ExecuteCommand("dashboard");
 
-            if (process.ExitCode != 0)
+            if (result.ExitCode != 0)
             {
-                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{process.StandardError.ReadToEnd()}");
+                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
             }
         }
 
@@ -208,27 +182,11 @@
             var lastQueue = Interlocked.Exchange(ref this.eventList, new ConcurrentQueue<Event>());
             var serialized = JsonConvert.SerializeObject(lastQueue, this.jsonSettings);
 
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
-            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
-            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                CreateNoWindow = true,
-                FileName = "cmd.exe",
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                Arguments = $"/C {executablePath}"
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-            process.StandardInput.WriteLine(serialized);
-            process.StandardInput.Close();
-            process.WaitForExit();
+            var result = this.ExecuteCommandToStdIn(serialized);
 
-            if (process.ExitCode != 0)
+            if (result.ExitCode != 0)
             {
-                this.logger.Error($"Sending pulses exited with nonzero exit code.\n{process.StandardError.ReadToEnd()}");
+                this.logger.Error($"Sending pulses exited with nonzero exit code.\n{result.StandardError.ReadToEnd()}");
             }
         }
 
@@ -305,5 +263,46 @@
             });
         }
 
+        private System.Diagnostics.Process ExecuteCommand(string command)
+        {
+            var process = this.MakeProcess(command, false);
+
+            process.Start();
+            process.WaitForExit();
+
+            return process;
+        }
+
+        private System.Diagnostics.Process ExecuteCommandToStdIn(string stdin)
+        {
+            var process = this.MakeProcess(null, true);
+
+            process.Start();
+            process.StandardInput.WriteLine(stdin);
+            process.StandardInput.Close();
+            process.WaitForExit();
+
+            return process;
+        }
+
+        private System.Diagnostics.Process MakeProcess(string command, bool isStdIn)
+        {
+            var safeCommand = command == null ? "" : $" {command}";
+            System.Diagnostics.Process process = new System.Diagnostics.Process();
+            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
+            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                CreateNoWindow = true,
+                FileName = "cmd.exe",
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardInput = isStdIn,
+                Arguments = $"/C \"{executablePath}\"{safeCommand}"
+            };
+            process.StartInfo = startInfo;
+
+            return process;
+        }
     }
 }
