@@ -6,7 +6,7 @@
   <Commands package="guidPSActivityInsights">
     <Menus>
       <Menu guid="guidPSActivityInsightsCmdSet" id="SubMenu" priority="0x0100">
-        <Parent guid="guidPSActivityInsightsCmdSet" id="MyMenuGroup"/>
+        <Parent guid="guidPSActivityInsightsCmdSet" id="MyMenuGroup" />
         <Strings>
           <ButtonText>Pluralsight Activity Insights</ButtonText>
           <CommandName>Pluralsight Activity Insights</CommandName>
@@ -16,10 +16,10 @@
 
     <Groups>
       <Group guid="guidPSActivityInsightsCmdSet" id="MyMenuGroup" priority="0x0600">
-        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
       </Group>
       <Group guid="guidPSActivityInsightsCmdSet" id="SubMenuGroup" priority="0x0000">
-        <Parent guid="guidPSActivityInsightsCmdSet" id="SubMenu"/>
+        <Parent guid="guidPSActivityInsightsCmdSet" id="SubMenu" />
       </Group>
     </Groups>
 

@@ -20,9 +20,16 @@
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
             var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new MenuCommand(this.Execute, menuCommandID);
+            var menuItem = new OleMenuCommand(this.Execute, menuCommandID);
+            menuItem.BeforeQueryStatus += new EventHandler(OnBeforeQueryStatus);
             commandService.AddCommand(menuItem);
             this.logger = LogManager.GetLogger(typeof(PSActivityInsights));
+        }
+
+        private void OnBeforeQueryStatus(object sender, EventArgs e)
+        {
+            var myCommand = sender as OleMenuCommand;
+            myCommand.Enabled = Utilities.HasBinary();
         }
 
         public static RegisterPSActivityInsightsCommand Instance
@@ -52,7 +59,7 @@
                     case MessageBoxResult.OK:
                         if (this.package is PSActivityInsights ext)
                         {
-                            ext.RegisterUser();
+                            ext.RegisterUserAsync();
                             ext.StartPulseTrackingAsync();
                         }
                         break;

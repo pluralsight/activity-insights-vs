@@ -1,13 +1,11 @@
 ﻿namespace ps_activity_insights
 {
     using System.Collections.Generic;
-    using System.IO;
     using System.Runtime.InteropServices;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
     using Newtonsoft.Json.Converters;
     using System.Threading;
-    using System.Windows;
     using System;
     using EnvDTE;
     using Microsoft.VisualStudio.Shell.Interop;
@@ -17,6 +15,7 @@
     using Window = EnvDTE.Window;
     using log4net;
     using System.Collections.Concurrent;
+    using System.ComponentModel;
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
@@ -45,6 +44,7 @@
         private BuildEvents buildEvents;
         private DocumentEvents documentEvents;
         private ILog logger;
+        private bool started = false;
         private string lastFile = null;
         private long? lastFileTime = null;
 
@@ -59,37 +59,24 @@
 
                 try
                 {
-                    var psActivityInsightsInstallDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    var psActivityInsightsInstallFile = Path.Combine(Directory.GetParent(psActivityInsightsInstallDir).ToString(), "installation.yaml");
+                    if (Utilities.IsReady())
+                    {
+                        await this.StartPulseTrackingAsync();
+                    }
 
-                    if (!File.Exists(psActivityInsightsInstallFile))
+                    if (!Utilities.HasBinary())
                     {
-                        var message = "Register this device to see your Pluralsight Activity Insights metrics.";
-                        var label = "Register New Device";
-                        MessageBoxResult res = MessageBox.Show(message, label, MessageBoxButton.OKCancel, MessageBoxImage.Question);
-                        switch (res)
+                        async void cb(object o, AsyncCompletedEventArgs a)
                         {
-                            case MessageBoxResult.OK:
-                                logger.Info("Registering user from popup window");
-                                this.RegisterUser();
-                                await this.StartPulseTrackingAsync();
-                                break;
-                            case MessageBoxResult.Cancel:
-                                MessageBox.Show("You can always opt in later on by enabling from the Tools window.");
-                                break;
+                            if (Utilities.IsRegistered())
+                            {
+                                await StartPulseTrackingAsync();
+                            }
                         }
-                        var response = res.ToString();
-                        CreateInstallFile(response, psActivityInsightsInstallFile);
+                        Utilities.DownloadBinaryAndThen(cb);
                     }
-                    else
-                    {
-                        var yamlFile = CheckInstallStatus(psActivityInsightsInstallFile);
-                        if (yamlFile.PromptResponse == MessageBoxResult.OK.ToString())
-                        {
-                            await this.StartPulseTrackingAsync();
-                        }
-                    }
-                } catch (Exception e)
+                }
+                catch (Exception e)
                 {
                     logger.Error(e);
                 }
@@ -98,40 +85,53 @@
             await OpenPSActivityInsightsDashboard.InitializeAsync(this);
         }
 
-        private InstallFile CheckInstallStatus(string filePath)
+        private void StartTimer()
         {
-            var fileContents = File.ReadAllText(filePath);
-            var deserializer = new YamlDotNet.Serialization.Deserializer();
-            var yamlFile = deserializer.Deserialize<InstallFile>(fileContents);
-            return yamlFile;
-        }
-
-        private void CreateInstallFile(string response, string filePath)
-        {
-            var serializer = new YamlDotNet.Serialization.Serializer();
-            var fileContents = serializer.Serialize(new InstallFile
+            if (!this.started)
             {
-                PromptResponse = response,
-                InstallDate = DateTimeOffset.UtcNow.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
-            });
-            File.WriteAllText(filePath, fileContents);
+                this.started = true;
+                this.timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+            }
         }
 
-        public void RegisterUser()
+        private void StopTimer()
+        {
+            if (this.started)
+            {
+                this.started = false;
+                this.timer?.Dispose();
+                this.timer = null;
+            }
+        }
+
+        public async Task RegisterUserAsync()
         {
             var result = this.ExecuteCommand("register");
 
+            if (result.ExitCode == 100)
+            {
+                var acceptedTos = this.ShowTos(await result.StandardOutput.ReadToEndAsync());
+
+                if (acceptedTos) {
+                    await this.StartPulseTrackingAsync();
+                    await this.RegisterUserAsync();
+                } else
+                {
+                    await this.StopPulseTrackingAsync();
+                }
+            }
             if (result.ExitCode != 0)
             {
-                this.logger.Error($"Register process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
+                this.logger.Error($"Register process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
             }
         }
 
         public async Task StartPulseTrackingAsync()
         {
+            if (started) return;
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            this.timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+            this.StartTimer();
             if (await GetServiceAsync(typeof(DTE)) is DTE dte)
             {
                 Events events = dte.Events;
@@ -153,6 +153,32 @@
             }
         }
 
+        public async Task StopPulseTrackingAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            this.StopTimer();
+            if (await GetServiceAsync(typeof(DTE)) is DTE dte)
+            {
+                Events events = dte.Events;
+
+                WindowEvents windowEvents = events.WindowEvents;
+                windowEvents.WindowActivated -= this.OnActiveDocumentChanged;
+
+                this.dteEvents = events.DTEEvents;
+                this.dteEvents.OnBeginShutdown -= this.OnBeginShutdown;
+
+                this.textEditorEvents = events.TextEditorEvents;
+                this.textEditorEvents.LineChanged -= this.OnLineChanged;
+
+                this.buildEvents = events.BuildEvents;
+                this.buildEvents.OnBuildDone -= this.OnBuildDone;
+
+                this.documentEvents = events.DocumentEvents;
+                this.documentEvents.DocumentSaved -= this.OnDocumentSaved;
+            }
+        }
+
         private void AddEventToBatch(Event e)
         {
             if (e.EventType is EventType.Shutdown)
@@ -165,13 +191,26 @@
             }
         }
 
-        public void OpenDashboard()
+        public async Task OpenDashboardAsync()
         {
             var result = this.ExecuteCommand("dashboard");
 
-            if (result.ExitCode != 0)
+            if (result.ExitCode == 100)
             {
-                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
+                var acceptedTos = this.ShowTos(await result.StandardOutput.ReadToEndAsync());
+
+                if (acceptedTos)
+                {
+                    await this.StartPulseTrackingAsync();
+                    await this.OpenDashboardAsync();
+                } else
+                {
+                    await this.StopPulseTrackingAsync();
+                }
+            }
+            else if (result.ExitCode != 0)
+            {
+                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
             }
         }
 
@@ -184,7 +223,20 @@
 
             var result = this.ExecuteCommandToStdIn(serialized);
 
-            if (result.ExitCode != 0)
+            if (result.ExitCode == 100)
+            {
+                JoinableTaskFactory.RunAsync(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    var stdOut = await result.StandardOutput.ReadToEndAsync();
+
+                    if (!this.ShowTos(stdOut))
+                    {
+                       await this.StopPulseTrackingAsync();
+                    }
+                });
+            }
+            else if (result.ExitCode != 0)
             {
                 this.logger.Error($"Sending pulses exited with nonzero exit code.\n{result.StandardError.ReadToEnd()}");
             }
@@ -192,7 +244,10 @@
 
         private void HandleEvent(Event e)
         {
-            this.AddEventToBatch(e);
+            if (this.started)
+            {
+                this.AddEventToBatch(e);
+            }
         }
 
         private void OnBuildDone(vsBuildScope scope, vsBuildAction action)
@@ -263,6 +318,34 @@
             });
         }
 
+        private bool ShowTos(string tosText)
+        {
+            var tos = new TosDialog(tosText);
+            var result = tos.ShowDialog();
+
+            if ((bool)result)
+            {
+                return this.AcceptTos();
+            }
+            else
+            {
+                this.logger.Info("they clicked no");
+                return false;
+            }
+        }
+
+        private bool AcceptTos()
+        {
+            var result = this.ExecuteCommand("accept_tos");
+            if (result.ExitCode > 0)
+            {
+                this.logger.Error("Failed to accept TOS");
+                return false;
+            }
+
+            return true;
+        }
+
         private System.Diagnostics.Process ExecuteCommand(string command)
         {
             var process = this.MakeProcess(command, false);
@@ -289,16 +372,15 @@
         {
             var safeCommand = command == null ? "" : $" {command}";
             System.Diagnostics.Process process = new System.Diagnostics.Process();
-            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
             System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 CreateNoWindow = true,
                 FileName = "cmd.exe",
                 UseShellExecute = false,
                 RedirectStandardError = true,
+                RedirectStandardOutput = true,
                 RedirectStandardInput = isStdIn,
-                Arguments = $"/C \"{executablePath}\"{safeCommand}"
+                Arguments = $"/C \"{Utilities.binaryPath}\"{safeCommand}"
             };
             process.StartInfo = startInfo;
 
