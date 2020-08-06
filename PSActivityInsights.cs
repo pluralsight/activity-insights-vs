@@ -1,13 +1,11 @@
 ﻿namespace ps_activity_insights
 {
     using System.Collections.Generic;
-    using System.IO;
     using System.Runtime.InteropServices;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
     using Newtonsoft.Json.Converters;
     using System.Threading;
-    using System.Windows;
     using System;
     using EnvDTE;
     using Microsoft.VisualStudio.Shell.Interop;
@@ -17,6 +15,7 @@
     using Window = EnvDTE.Window;
     using log4net;
     using System.Collections.Concurrent;
+    using System.ComponentModel;
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
@@ -59,62 +58,30 @@
 
                 try
                 {
-                    var psActivityInsightsInstallDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    var psActivityInsightsInstallFile = Path.Combine(Directory.GetParent(psActivityInsightsInstallDir).ToString(), "installation.yaml");
+                    if (Utilities.IsReady())
+                    {
+                        await this.StartPulseTrackingAsync();
+                    }
 
-                    if (!File.Exists(psActivityInsightsInstallFile))
+                    if (!Utilities.HasBinary())
                     {
-                        var message = "Register this device to see your Pluralsight Activity Insights metrics.";
-                        var label = "Register New Device";
-                        MessageBoxResult res = MessageBox.Show(message, label, MessageBoxButton.OKCancel, MessageBoxImage.Question);
-                        switch (res)
+                        async void cb(object o, AsyncCompletedEventArgs a)
                         {
-                            case MessageBoxResult.OK:
-                                logger.Info("Registering user from popup window");
-                                this.RegisterUser();
-                                await this.StartPulseTrackingAsync();
-                                break;
-                            case MessageBoxResult.Cancel:
-                                MessageBox.Show("You can always opt in later on by enabling from the Tools window.");
-                                break;
+                            if (Utilities.IsRegistered())
+                            {
+                                await StartPulseTrackingAsync();
+                            }
                         }
-                        var response = res.ToString();
-                        CreateInstallFile(response, psActivityInsightsInstallFile);
+                        Utilities.DownloadBinaryAndThen(cb);
                     }
-                    else
-                    {
-                        var yamlFile = CheckInstallStatus(psActivityInsightsInstallFile);
-                        if (yamlFile.PromptResponse == MessageBoxResult.OK.ToString())
-                        {
-                            await this.StartPulseTrackingAsync();
-                        }
-                    }
-                } catch (Exception e)
+                }
+                catch (Exception e)
                 {
                     logger.Error(e);
                 }
             });
             await RegisterPSActivityInsightsCommand.InitializeAsync(this);
             await OpenPSActivityInsightsDashboard.InitializeAsync(this);
-        }
-
-        private InstallFile CheckInstallStatus(string filePath)
-        {
-            var fileContents = File.ReadAllText(filePath);
-            var deserializer = new YamlDotNet.Serialization.Deserializer();
-            var yamlFile = deserializer.Deserialize<InstallFile>(fileContents);
-            return yamlFile;
-        }
-
-        private void CreateInstallFile(string response, string filePath)
-        {
-            var serializer = new YamlDotNet.Serialization.Serializer();
-            var fileContents = serializer.Serialize(new InstallFile
-            {
-                PromptResponse = response,
-                InstallDate = DateTimeOffset.UtcNow.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
-            });
-            File.WriteAllText(filePath, fileContents);
         }
 
         public void RegisterUser()
@@ -125,6 +92,7 @@
             {
                 this.logger.Error($"Register process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
             }
+
         }
 
         public async Task StartPulseTrackingAsync()
@@ -289,8 +257,6 @@
         {
             var safeCommand = command == null ? "" : $" {command}";
             System.Diagnostics.Process process = new System.Diagnostics.Process();
-            var executableDir = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var executablePath = Path.Combine(Directory.GetParent(executableDir).ToString(), "ps-activity-insights.exe");
             System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 CreateNoWindow = true,
@@ -298,7 +264,7 @@
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = isStdIn,
-                Arguments = $"/C \"{executablePath}\"{safeCommand}"
+                Arguments = $"/C \"{Utilities.binaryPath}\"{safeCommand}"
             };
             process.StartInfo = startInfo;
 

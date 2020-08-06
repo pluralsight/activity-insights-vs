@@ -6,9 +6,6 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ps-activity-insights", "ps-activity-insights.csproj", "{DCCA698F-5F37-4F79-880B-D46886235EE4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AAA9D89C-AF55-4E7F-86CC-3E559CF6B907}"
-	ProjectSection(SolutionItems) = preProject
-		main.exe = main.exe
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
