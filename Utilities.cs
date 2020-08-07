@@ -25,8 +25,6 @@
 
         public static bool IsReady()
         {
-            logger.Info($"pluralsight dir {pluralsightDir}");
-            logger.Info($"binary path {binaryPath}");
             return IsRegistered() && HasBinary();
         }
 
