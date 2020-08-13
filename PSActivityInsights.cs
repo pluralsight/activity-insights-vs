@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
     using System.Runtime.InteropServices;
+    using System.Windows;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
     using Newtonsoft.Json.Converters;
@@ -16,6 +17,7 @@
     using log4net;
     using System.Collections.Concurrent;
     using System.ComponentModel;
+    using System.Windows.Forms;
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
@@ -88,6 +90,10 @@
         {
             var result = this.ExecuteCommand("register");
 
+            if (result.ExitCode == 100)
+            {
+                if (this.ShowTos(result.StandardOutput.ReadToEnd())) this.RegisterUser();
+            }
             if (result.ExitCode != 0)
             {
                 this.logger.Error($"Register process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
@@ -137,9 +143,14 @@
         {
             var result = this.ExecuteCommand("dashboard");
 
-            if (result.ExitCode != 0)
+            if (result.ExitCode == 100)
+            {
+                if (this.ShowTos(result.StandardOutput.ReadToEnd())) this.OpenDashboard();
+            }
+            else if (result.ExitCode != 0)
             {
                 this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
+
             }
         }
 
@@ -152,7 +163,11 @@
 
             var result = this.ExecuteCommandToStdIn(serialized);
 
-            if (result.ExitCode != 0)
+            if (result.ExitCode == 100)
+            {
+                if (!this.ShowTos(result.StandardOutput.ReadToEnd())) this.timer.Dispose();
+            }
+            else if (result.ExitCode != 0)
             {
                 this.logger.Error($"Sending pulses exited with nonzero exit code.\n{result.StandardError.ReadToEnd()}");
             }
@@ -231,6 +246,34 @@
             });
         }
 
+        private bool ShowTos(string tosText)
+        {
+            var tos = new TosDialog(tosText);
+            var result = tos.ShowDialog();
+
+            if ((bool)result)
+            {
+                return this.AcceptTos();
+            }
+            else
+            {
+                this.logger.Info("they clicked no");
+                return false;
+            }
+        }
+
+        private bool AcceptTos()
+        {
+            var result = this.ExecuteCommand("accept_tos");
+            if (result.ExitCode > 0)
+            {
+                this.logger.Error("Failed to accept TOS");
+                return false;
+            }
+
+            return true;
+        }
+
         private System.Diagnostics.Process ExecuteCommand(string command)
         {
             var process = this.MakeProcess(command, false);
@@ -263,6 +306,7 @@
                 FileName = "cmd.exe",
                 UseShellExecute = false,
                 RedirectStandardError = true,
+                RedirectStandardOutput = true,
                 RedirectStandardInput = isStdIn,
                 Arguments = $"/C \"{Utilities.binaryPath}\"{safeCommand}"
             };
