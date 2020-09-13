@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.PlatformUI;
+using System;
 using System.Windows;
 namespace ps_activity_insights
 {

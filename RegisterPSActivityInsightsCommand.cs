@@ -59,7 +59,7 @@
                     case MessageBoxResult.OK:
                         if (this.package is PSActivityInsights ext)
                         {
-                            ext.RegisterUser();
+                            ext.RegisterUserAsync();
                             ext.StartPulseTrackingAsync();
                         }
                         break;

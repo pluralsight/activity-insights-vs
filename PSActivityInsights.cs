@@ -2,7 +2,6 @@
 {
     using System.Collections.Generic;
     using System.Runtime.InteropServices;
-    using System.Windows;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
     using Newtonsoft.Json.Converters;
@@ -17,7 +16,6 @@
     using log4net;
     using System.Collections.Concurrent;
     using System.ComponentModel;
-    using System.Windows.Forms;
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
@@ -46,6 +44,7 @@
         private BuildEvents buildEvents;
         private DocumentEvents documentEvents;
         private ILog logger;
+        private bool started = false;
         private string lastFile = null;
         private long? lastFileTime = null;
 
@@ -86,26 +85,53 @@
             await OpenPSActivityInsightsDashboard.InitializeAsync(this);
         }
 
-        public void RegisterUser()
+        private void StartTimer()
+        {
+            if (!this.started)
+            {
+                this.started = true;
+                this.timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+            }
+        }
+
+        private void StopTimer()
+        {
+            if (this.started)
+            {
+                this.started = false;
+                this.timer?.Dispose();
+                this.timer = null;
+            }
+        }
+
+        public async Task RegisterUserAsync()
         {
             var result = this.ExecuteCommand("register");
 
             if (result.ExitCode == 100)
             {
-                if (this.ShowTos(result.StandardOutput.ReadToEnd())) this.RegisterUser();
+                var acceptedTos = this.ShowTos(await result.StandardOutput.ReadToEndAsync());
+
+                if (acceptedTos) {
+                    await this.StartPulseTrackingAsync();
+                    await this.RegisterUserAsync();
+                } else
+                {
+                    await this.StopPulseTrackingAsync();
+                }
             }
             if (result.ExitCode != 0)
             {
-                this.logger.Error($"Register process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
+                this.logger.Error($"Register process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
             }
-
         }
 
         public async Task StartPulseTrackingAsync()
         {
+            if (started) return;
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            this.timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+            this.StartTimer();
             if (await GetServiceAsync(typeof(DTE)) is DTE dte)
             {
                 Events events = dte.Events;
@@ -127,6 +153,32 @@
             }
         }
 
+        public async Task StopPulseTrackingAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            this.StopTimer();
+            if (await GetServiceAsync(typeof(DTE)) is DTE dte)
+            {
+                Events events = dte.Events;
+
+                WindowEvents windowEvents = events.WindowEvents;
+                windowEvents.WindowActivated -= this.OnActiveDocumentChanged;
+
+                this.dteEvents = events.DTEEvents;
+                this.dteEvents.OnBeginShutdown -= this.OnBeginShutdown;
+
+                this.textEditorEvents = events.TextEditorEvents;
+                this.textEditorEvents.LineChanged -= this.OnLineChanged;
+
+                this.buildEvents = events.BuildEvents;
+                this.buildEvents.OnBuildDone -= this.OnBuildDone;
+
+                this.documentEvents = events.DocumentEvents;
+                this.documentEvents.DocumentSaved -= this.OnDocumentSaved;
+            }
+        }
+
         private void AddEventToBatch(Event e)
         {
             if (e.EventType is EventType.Shutdown)
@@ -139,18 +191,26 @@
             }
         }
 
-        public void OpenDashboard()
+        public async Task OpenDashboardAsync()
         {
             var result = this.ExecuteCommand("dashboard");
 
             if (result.ExitCode == 100)
             {
-                if (this.ShowTos(result.StandardOutput.ReadToEnd())) this.OpenDashboard();
+                var acceptedTos = this.ShowTos(await result.StandardOutput.ReadToEndAsync());
+
+                if (acceptedTos)
+                {
+                    await this.StartPulseTrackingAsync();
+                    await this.OpenDashboardAsync();
+                } else
+                {
+                    await this.StopPulseTrackingAsync();
+                }
             }
             else if (result.ExitCode != 0)
             {
-                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{result.StandardError.ReadToEnd()}");
-
+                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
             }
         }
 
@@ -165,7 +225,16 @@
 
             if (result.ExitCode == 100)
             {
-                if (!this.ShowTos(result.StandardOutput.ReadToEnd())) this.timer.Dispose();
+                JoinableTaskFactory.RunAsync(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    var stdOut = await result.StandardOutput.ReadToEndAsync();
+
+                    if (!this.ShowTos(stdOut))
+                    {
+                       await this.StopPulseTrackingAsync();
+                    }
+                });
             }
             else if (result.ExitCode != 0)
             {
@@ -175,7 +244,10 @@
 
         private void HandleEvent(Event e)
         {
-            this.AddEventToBatch(e);
+            if (this.started)
+            {
+                this.AddEventToBatch(e);
+            }
         }
 
         private void OnBuildDone(vsBuildScope scope, vsBuildAction action)

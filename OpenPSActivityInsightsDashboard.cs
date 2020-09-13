@@ -58,7 +58,7 @@
                     case MessageBoxResult.OK:
                         if (this.package is PSActivityInsights ext)
                         {
-                            ext.OpenDashboard();
+                            ext.OpenDashboardAsync();
                         }
                         break;
                 }

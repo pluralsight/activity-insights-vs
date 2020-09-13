@@ -13,7 +13,7 @@
         private static readonly string credentialsPath = Path.Combine(pluralsightDir, "credentials.yaml");
         public static readonly string binaryPath = Path.Combine(pluralsightDir, "activity-insights.exe");
         private static readonly ILog logger;
-        private static readonly Uri downloadPath = new Uri("https://ps-cdn.s3-us-west-2.amazonaws.com/learner-workflow/ps-time/windows/ps-time.exe");
+        private static readonly Uri downloadPath = new Uri("https://ps-cdn.s3-us-west-2.amazonaws.com/learner-workflow/ps-time/windows/activity-insights-latest.exe");
 
         public static object KnownMonikers { get; private set; }
 
