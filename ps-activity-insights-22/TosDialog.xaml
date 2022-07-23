@@ -1,0 +1,41 @@
+﻿<platformUI:DialogWindow x:Class="ps_activity_insights_22.TosDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:platformUI="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             Width="370" 
+             Height="288.8"
+             Title="Pluralsight Terms of Service"
+             WindowStartupLocation="CenterScreen" 
+             ResizeMode="NoResize" 
+             ShowInTaskbar="False">
+    <Grid>
+        <TextBlock x:Name="TermsOfService_Text" 
+                   HorizontalAlignment="Stretch" 
+                   VerticalAlignment="Top"
+                   TextWrapping="WrapWithOverflow"
+                   Margin="30,10,10,0" />
+
+        <TextBlock Margin="10,0,0,12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <Hyperlink Click="TermsOfService_Open">Terms of Use</Hyperlink>
+        </TextBlock>
+
+        <TextBlock Margin="96,0,0,12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <Hyperlink Click="PrivacyPolicy_Open">Privacy Policy</Hyperlink>
+        </TextBlock>
+        <Button x:Name="AcceptButton" 
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Bottom" 
+                Width="75" 
+                Content="Accept" 
+                Margin="0,0,10,10" 
+                Click="AcceptButton_Click"/>
+
+        <Button x:Name="DeclineButton" 
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Bottom" 
+                Width="75" 
+                Content="Decline" 
+                Margin="0,0,90,10" 
+                Click="DeclineButton_Click"/>
+    </Grid>
+</platformUI:DialogWindow>

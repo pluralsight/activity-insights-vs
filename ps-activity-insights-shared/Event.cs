@@ -1,4 +1,4 @@
-﻿namespace ps_activity_insights
+﻿namespace ps_activity_insights_shared
 {
     using System;
     public enum EventType
@@ -19,14 +19,14 @@
 
         public Event(EventType type, string filePath)
         {
-            this.EventType = type;
-            this.FilePath = filePath;
+            EventType = type;
+            FilePath = filePath;
             GetUnixTimestamp();
         }
 
         public Event(EventType type)
         {
-            this.EventType = type;
+            EventType = type;
             GetUnixTimestamp();
         }
 
@@ -34,7 +34,7 @@
         {
             var now = DateTime.Now;
             var unixTimestamp = ((DateTimeOffset)now).ToUnixTimeMilliseconds();
-            this.EventDate = unixTimestamp;
+            EventDate = unixTimestamp;
         }
     }
 }

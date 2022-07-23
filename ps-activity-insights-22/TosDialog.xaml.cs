@@ -1,35 +1,35 @@
-﻿using Microsoft.VisualStudio.PlatformUI;
-using System;
-using System.Windows;
-namespace ps_activity_insights
+﻿namespace ps_activity_insights_22
 {
+    using System.Windows;
+    using Microsoft.VisualStudio.PlatformUI;
+
     public partial class TosDialog : DialogWindow
     {
         public TosDialog(string tosText)
         {
             InitializeComponent();
-            this.TermsOfService_Text.Text = tosText;
+            TermsOfService_Text.Text = tosText;
         }
 
         private void TermsOfService_Open(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://www.pluralsight.com/terms");
+            _ = System.Diagnostics.Process.Start("https://www.pluralsight.com/terms");
         }
 
         private void PrivacyPolicy_Open(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://www.pluralsight.com/privacy");
+            _ = System.Diagnostics.Process.Start("https://www.pluralsight.com/privacy");
         }
         private void AcceptButton_Click(object sender, RoutedEventArgs e)
         {
-            this.DialogResult = true;
-            this.Close();
+            DialogResult = true;
+            Close();
         }
 
         private void DeclineButton_Click(object sender, RoutedEventArgs e)
         {
-            this.DialogResult = false;
-            this.Close();
+            DialogResult = false;
+            Close();
         }
     }
 }

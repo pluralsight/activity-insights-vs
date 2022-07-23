@@ -1,4 +1,4 @@
-﻿namespace ps_activity_insights
+﻿namespace ps_activity_insights_shared
 {
     using System;
     using System.ComponentModel.Design;
@@ -20,9 +20,9 @@
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
             var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new OleMenuCommand(this.Execute, menuCommandID);
+            var menuItem = new OleMenuCommand(Execute, menuCommandID);
             menuItem.BeforeQueryStatus += new EventHandler(OnBeforeQueryStatus);
-            this.logger = LogManager.GetLogger(typeof(OpenPSActivityInsightsDashboard));
+            logger = LogManager.GetLogger(typeof(OpenPSActivityInsightsDashboard));
             commandService.AddCommand(menuItem);
         }
 
@@ -56,16 +56,16 @@
                 switch (res)
                 {
                     case MessageBoxResult.OK:
-                        if (this.package is PSActivityInsights ext)
+                        if (package is PSActivityInsights ext)
                         {
-                            ext.OpenDashboardAsync();
+                            _ = ext.OpenDashboardAsync();
                         }
                         break;
                 }
             }
             catch (Exception ex)
             {
-                this.logger.Error(ex);
+                logger.Error(ex);
             }
         }
     }
