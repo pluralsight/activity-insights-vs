@@ -1,27 +1,48 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29709.97
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ps-activity-insights", "ps-activity-insights.csproj", "{DCCA698F-5F37-4F79-880B-D46886235EE4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ps-activity-insights", "ps-activity-insights\ps-activity-insights.csproj", "{DCCA698F-5F37-4F79-880B-D46886235EE4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AAA9D89C-AF55-4E7F-86CC-3E559CF6B907}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "ps-activity-insights-shared", "ps-activity-insights-shared\ps-activity-insights-shared.shproj", "{B462B08A-AD54-4239-9298-641BC0293C37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ps-activity-insights-22", "ps-activity-insights-22\ps-activity-insights-22.csproj", "{A6267BCD-B327-4025-8123-1AE804478413}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Debug|x86.ActiveCfg = Debug|x86
+		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Debug|x86.Build.0 = Debug|x86
 		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Release|x86.ActiveCfg = Release|x86
+		{DCCA698F-5F37-4F79-880B-D46886235EE4}.Release|x86.Build.0 = Release|x86
+		{A6267BCD-B327-4025-8123-1AE804478413}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6267BCD-B327-4025-8123-1AE804478413}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6267BCD-B327-4025-8123-1AE804478413}.Debug|x86.ActiveCfg = Debug|x86
+		{A6267BCD-B327-4025-8123-1AE804478413}.Debug|x86.Build.0 = Debug|x86
+		{A6267BCD-B327-4025-8123-1AE804478413}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6267BCD-B327-4025-8123-1AE804478413}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6267BCD-B327-4025-8123-1AE804478413}.Release|x86.ActiveCfg = Release|x86
+		{A6267BCD-B327-4025-8123-1AE804478413}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {75A23A93-BDC2-49B3-BD7D-72526EE68E19}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		ps-activity-insights-shared\ps-activity-insights-shared.projitems*{a6267bcd-b327-4025-8123-1ae804478413}*SharedItemsImports = 4
+		ps-activity-insights-shared\ps-activity-insights-shared.projitems*{b462b08a-ad54-4239-9298-641bc0293c37}*SharedItemsImports = 13
+		ps-activity-insights-shared\ps-activity-insights-shared.projitems*{dcca698f-5f37-4f79-880b-d46886235ee4}*SharedItemsImports = 4
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,4 @@
-﻿namespace ps_activity_insights
+﻿namespace ps_activity_insights_shared
 {
     using System;
     using System.ComponentModel.Design;
@@ -20,10 +20,10 @@
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
             var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new OleMenuCommand(this.Execute, menuCommandID);
+            var menuItem = new OleMenuCommand(Execute, menuCommandID);
             menuItem.BeforeQueryStatus += new EventHandler(OnBeforeQueryStatus);
             commandService.AddCommand(menuItem);
-            this.logger = LogManager.GetLogger(typeof(PSActivityInsights));
+            logger = LogManager.GetLogger(typeof(PSActivityInsights));
         }
 
         private void OnBeforeQueryStatus(object sender, EventArgs e)
@@ -50,26 +50,26 @@
         {
             try
             {
-                this.logger.Info("Registering user from Tools menu");
+                logger.Info("Registering user from Tools menu");
                 var message = "Register this device to see your Pluralsight Activity Insights metrics.";
                 var label = "Register New Device";
                 MessageBoxResult res = MessageBox.Show(message, label, MessageBoxButton.OKCancel, MessageBoxImage.Question);
                 switch (res)
                 {
                     case MessageBoxResult.OK:
-                        if (this.package is PSActivityInsights ext)
+                        if (package is PSActivityInsights ext)
                         {
-                            ext.RegisterUserAsync();
-                            ext.StartPulseTrackingAsync();
+                            _ = ext.RegisterUserAsync();
+                            _ = ext.StartPulseTrackingAsync();
                         }
                         break;
                     case MessageBoxResult.Cancel:
-                        MessageBox.Show("You can always opt in later on by enabling from the Tools window.");
+                        _ = MessageBox.Show("You can always opt in later on by enabling from the Tools window.");
                         break;
                 }
             } catch (Exception ex)
             {
-                this.logger.Error(ex);
+                logger.Error(ex);
             }
         }
     }

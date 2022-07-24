@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidPSActivityInsights">
+    <Menus>
+      <Menu guid="guidPSActivityInsightsCmdSet" id="SubMenu" priority="0x0100">
+        <Parent guid="guidPSActivityInsightsCmdSet" id="MyMenuGroup" />
+        <Strings>
+          <ButtonText>Pluralsight Activity Insights</ButtonText>
+          <CommandName>Pluralsight Activity Insights</CommandName>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidPSActivityInsightsCmdSet" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+      <Group guid="guidPSActivityInsightsCmdSet" id="SubMenuGroup" priority="0x0000">
+        <Parent guid="guidPSActivityInsightsCmdSet" id="SubMenu" />
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidPSActivityInsightsCmdSet" id="cmdidRegisterPSActivityInsightsCommand" priority="0x0100" type="Button">
+        <Parent guid="guidPSActivityInsightsCmdSet" id="SubMenuGroup" />
+        <Strings>
+          <ButtonText>Register Device</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidPSActivityInsightsCmdSet" id="cmdidOpenPSActivityInsightsDashboard" priority="0x0100" type="Button">
+        <Parent guid="guidPSActivityInsightsCmdSet" id="SubMenuGroup" />
+        <Strings>
+          <ButtonText>Open Dashboard</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <Symbols>
+    <!-- This is the package guid. -->
+    <GuidSymbol name="guidPSActivityInsights" value="{265b4cf4-106d-4ae8-933b-7351bb4721c4}" />
+
+    <!-- This is the guid used to group the menu commands together -->
+    <GuidSymbol name="guidPSActivityInsightsCmdSet" value="{3d96b5c3-90fb-416f-aaf2-3968ba8bbab1}">
+      <IDSymbol name="MyMenuGroup" value="0x1020" />
+      <IDSymbol name="SubMenu" value="0x1100"/>
+      <IDSymbol name="SubMenuGroup" value="0x1150"/>
+      <IDSymbol value="4129" name="cmdidRegisterPSActivityInsightsCommand" />
+      <IDSymbol value="4130" name="cmdidOpenPSActivityInsightsDashboard" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

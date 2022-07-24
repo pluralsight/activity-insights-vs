@@ -1,4 +1,4 @@
-﻿namespace ps_activity_insights
+﻿namespace ps_activity_insights_shared
 {
     using log4net;
     using System;

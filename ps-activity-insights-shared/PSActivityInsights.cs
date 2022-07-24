@@ -1,4 +1,4 @@
-﻿namespace ps_activity_insights
+﻿namespace ps_activity_insights_shared
 {
     using System.Collections.Generic;
     using System.Runtime.InteropServices;
@@ -26,7 +26,11 @@
     public sealed class PSActivityInsights : AsyncPackage
     {
         const string AutoloadGuidForNonSolutions = "4646B819-1AE0-4E79-97F4-8A8176FDD664";
+#if VS19
         public const string PackageGuidString = "c5214e54-d0f1-48d2-8158-fc00b6c64519";
+#else
+        public const string PackageGuidString = "265b4cf4-106d-4ae8-933b-7351bb4721c4";
+#endif
         private readonly int cacheBustTime = 60000;
         private ConcurrentQueue<Event> eventList = new ConcurrentQueue<Event>();
         private readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
@@ -53,7 +57,7 @@
             await JoinableTaskFactory.RunAsync(async () =>
             {
                 Logger.Setup();
-                this.logger = LogManager.GetLogger(typeof(PSActivityInsights));
+                logger = LogManager.GetLogger(typeof(PSActivityInsights));
 
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -61,7 +65,7 @@
                 {
                     if (Utilities.IsReady())
                     {
-                        await this.StartPulseTrackingAsync();
+                        await StartPulseTrackingAsync();
                     }
 
                     if (!Utilities.HasBinary())
@@ -87,42 +91,42 @@
 
         private void StartTimer()
         {
-            if (!this.started)
+            if (!started)
             {
-                this.started = true;
-                this.timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+                started = true;
+                timer = new Timer((t) => { SendBatch(); }, new AutoResetEvent(true), TimeSpan.Zero, TimeSpan.FromMinutes(1));
             }
         }
 
         private void StopTimer()
         {
-            if (this.started)
+            if (started)
             {
-                this.started = false;
-                this.timer?.Dispose();
-                this.timer = null;
+                started = false;
+                timer?.Dispose();
+                timer = null;
             }
         }
 
         public async Task RegisterUserAsync()
         {
-            var result = this.ExecuteCommand("register");
+            var result = ExecuteCommand("register");
 
             if (result.ExitCode == 100)
             {
-                var acceptedTos = this.ShowTos(await result.StandardOutput.ReadToEndAsync());
+                var acceptedTos = ShowTos(await result.StandardOutput.ReadToEndAsync());
 
                 if (acceptedTos) {
-                    await this.StartPulseTrackingAsync();
-                    await this.RegisterUserAsync();
+                    await StartPulseTrackingAsync();
+                    await RegisterUserAsync();
                 } else
                 {
-                    await this.StopPulseTrackingAsync();
+                    await StopPulseTrackingAsync();
                 }
             }
             if (result.ExitCode != 0)
             {
-                this.logger.Error($"Register process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
+                logger.Error($"Register process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
             }
         }
 
@@ -131,25 +135,25 @@
             if (started) return;
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            this.StartTimer();
+            StartTimer();
             if (await GetServiceAsync(typeof(DTE)) is DTE dte)
             {
                 Events events = dte.Events;
 
                 WindowEvents windowEvents = events.WindowEvents;
-                windowEvents.WindowActivated += this.OnActiveDocumentChanged;
+                windowEvents.WindowActivated += OnActiveDocumentChanged;
 
-                this.dteEvents = events.DTEEvents;
-                this.dteEvents.OnBeginShutdown += this.OnBeginShutdown;
+                dteEvents = events.DTEEvents;
+                dteEvents.OnBeginShutdown += OnBeginShutdown;
 
-                this.textEditorEvents = events.TextEditorEvents;
-                this.textEditorEvents.LineChanged += this.OnLineChanged;
+                textEditorEvents = events.TextEditorEvents;
+                textEditorEvents.LineChanged += OnLineChanged;
 
-                this.buildEvents = events.BuildEvents;
-                this.buildEvents.OnBuildDone += this.OnBuildDone;
+                buildEvents = events.BuildEvents;
+                buildEvents.OnBuildDone += OnBuildDone;
 
-                this.documentEvents = events.DocumentEvents;
-                this.documentEvents.DocumentSaved += this.OnDocumentSaved;
+                documentEvents = events.DocumentEvents;
+                documentEvents.DocumentSaved += OnDocumentSaved;
             }
         }
 
@@ -157,25 +161,25 @@
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            this.StopTimer();
+            StopTimer();
             if (await GetServiceAsync(typeof(DTE)) is DTE dte)
             {
                 Events events = dte.Events;
 
                 WindowEvents windowEvents = events.WindowEvents;
-                windowEvents.WindowActivated -= this.OnActiveDocumentChanged;
+                windowEvents.WindowActivated -= OnActiveDocumentChanged;
 
-                this.dteEvents = events.DTEEvents;
-                this.dteEvents.OnBeginShutdown -= this.OnBeginShutdown;
+                dteEvents = events.DTEEvents;
+                dteEvents.OnBeginShutdown -= OnBeginShutdown;
 
-                this.textEditorEvents = events.TextEditorEvents;
-                this.textEditorEvents.LineChanged -= this.OnLineChanged;
+                textEditorEvents = events.TextEditorEvents;
+                textEditorEvents.LineChanged -= OnLineChanged;
 
-                this.buildEvents = events.BuildEvents;
-                this.buildEvents.OnBuildDone -= this.OnBuildDone;
+                buildEvents = events.BuildEvents;
+                buildEvents.OnBuildDone -= OnBuildDone;
 
-                this.documentEvents = events.DocumentEvents;
-                this.documentEvents.DocumentSaved -= this.OnDocumentSaved;
+                documentEvents = events.DocumentEvents;
+                documentEvents.DocumentSaved -= OnDocumentSaved;
             }
         }
 
@@ -183,81 +187,81 @@
         {
             if (e.EventType is EventType.Shutdown)
             {
-                this.SendBatch();
+                SendBatch();
             }
             else
             {
-                this.eventList.Enqueue(e);
+                eventList.Enqueue(e);
             }
         }
 
         public async Task OpenDashboardAsync()
         {
-            var result = this.ExecuteCommand("dashboard");
+            var result = ExecuteCommand("dashboard");
 
             if (result.ExitCode == 100)
             {
-                var acceptedTos = this.ShowTos(await result.StandardOutput.ReadToEndAsync());
+                var acceptedTos = ShowTos(await result.StandardOutput.ReadToEndAsync());
 
                 if (acceptedTos)
                 {
-                    await this.StartPulseTrackingAsync();
-                    await this.OpenDashboardAsync();
+                    await StartPulseTrackingAsync();
+                    await OpenDashboardAsync();
                 } else
                 {
-                    await this.StopPulseTrackingAsync();
+                    await StopPulseTrackingAsync();
                 }
             }
             else if (result.ExitCode != 0)
             {
-                this.logger.Error($"Dashboard opening process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
+                logger.Error($"Dashboard opening process exited with nonzero status code.\n{await result.StandardError.ReadToEndAsync()}");
             }
         }
 
         private void SendBatch()
         {
-            if (this.eventList.Count == 0) return;
+            if (eventList.Count == 0) return;
 
-            var lastQueue = Interlocked.Exchange(ref this.eventList, new ConcurrentQueue<Event>());
-            var serialized = JsonConvert.SerializeObject(lastQueue, this.jsonSettings);
+            var lastQueue = Interlocked.Exchange(ref eventList, new ConcurrentQueue<Event>());
+            var serialized = JsonConvert.SerializeObject(lastQueue, jsonSettings);
 
-            var result = this.ExecuteCommandToStdIn(serialized);
+            var result = ExecuteCommandToStdIn(serialized);
 
             if (result.ExitCode == 100)
             {
-                JoinableTaskFactory.RunAsync(async () =>
+                _ = JoinableTaskFactory.RunAsync(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     var stdOut = await result.StandardOutput.ReadToEndAsync();
 
-                    if (!this.ShowTos(stdOut))
+                    if (!ShowTos(stdOut))
                     {
-                       await this.StopPulseTrackingAsync();
+                        await StopPulseTrackingAsync();
                     }
                 });
             }
             else if (result.ExitCode != 0)
             {
-                this.logger.Error($"Sending pulses exited with nonzero exit code.\n{result.StandardError.ReadToEnd()}");
+                logger.Error($"Sending pulses exited with nonzero exit code.\n{result.StandardError.ReadToEnd()}");
             }
         }
 
         private void HandleEvent(Event e)
         {
-            if (this.started)
+            if (started)
             {
-                this.AddEventToBatch(e);
+                AddEventToBatch(e);
             }
         }
 
         private void OnBuildDone(vsBuildScope scope, vsBuildAction action)
         {
-            this.HandleEvent(new Event(EventType.BuildDone));
+            HandleEvent(new Event(EventType.BuildDone));
         }
 
         private void OnDocumentSaved(Document document)
         {
-            JoinableTaskFactory.RunAsync(async () =>
+            _ = JoinableTaskFactory.RunAsync(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -271,13 +275,13 @@
 
         private void OnBeginShutdown()
         {
-            this.HandleEvent(new Event(EventType.Shutdown));
-            this.logger.Info("Beginning IDE shutdown");
+            HandleEvent(new Event(EventType.Shutdown));
+            logger.Info("Beginning IDE shutdown");
         }
 
         private void OnLineChanged(TextPoint start, TextPoint end, int hint)
         {
-            JoinableTaskFactory.RunAsync(async () =>
+            _ = JoinableTaskFactory.RunAsync(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 if (await GetServiceAsync(typeof(DTE)) is DTE dte)
@@ -287,10 +291,10 @@
                         var filePath = document.FullName;
                         var e = new Event(EventType.Typing, filePath);
 
-                        if (e.FilePath != this.lastFile || this.EnoughTimePassed(e))
+                        if (e.FilePath != lastFile || EnoughTimePassed(e))
                         {
-                            this.lastFile = filePath;
-                            this.lastFileTime = e.EventDate;
+                            lastFile = filePath;
+                            lastFileTime = e.EventDate;
                             HandleEvent(e);
                         }
                     }
@@ -300,12 +304,12 @@
 
         private bool EnoughTimePassed(Event e)
         {
-            return (e.EventDate - this.lastFileTime) > this.cacheBustTime;
+            return (e.EventDate - lastFileTime) > cacheBustTime;
         }
 
         private void OnActiveDocumentChanged(Window getFocus, Window lostFocus)
         {
-            JoinableTaskFactory.RunAsync(async () =>
+            _ = JoinableTaskFactory.RunAsync(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 var document = getFocus.Document;
@@ -320,26 +324,30 @@
 
         private bool ShowTos(string tosText)
         {
-            var tos = new TosDialog(tosText);
+#if VS19
+            var tos = new ps_activity_insights.TosDialog(tosText);
+#else
+            var tos = new ps_activity_insights_22.TosDialog(tosText);
+#endif
             var result = tos.ShowDialog();
 
             if ((bool)result)
             {
-                return this.AcceptTos();
+                return AcceptTos();
             }
             else
             {
-                this.logger.Info("they clicked no");
+                logger.Info("they clicked no");
                 return false;
             }
         }
 
         private bool AcceptTos()
         {
-            var result = this.ExecuteCommand("accept_tos");
+            var result = ExecuteCommand("accept_tos");
             if (result.ExitCode > 0)
             {
-                this.logger.Error("Failed to accept TOS");
+                logger.Error("Failed to accept TOS");
                 return false;
             }
 
@@ -348,9 +356,9 @@
 
         private System.Diagnostics.Process ExecuteCommand(string command)
         {
-            var process = this.MakeProcess(command, false);
+            var process = MakeProcess(command, false);
 
-            process.Start();
+            _ = process.Start();
             process.WaitForExit();
 
             return process;
@@ -358,9 +366,9 @@
 
         private System.Diagnostics.Process ExecuteCommandToStdIn(string stdin)
         {
-            var process = this.MakeProcess(null, true);
+            var process = MakeProcess(null, true);
 
-            process.Start();
+            _ = process.Start();
             process.StandardInput.WriteLine(stdin);
             process.StandardInput.Close();
             process.WaitForExit();
