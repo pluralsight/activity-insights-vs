@@ -39,7 +39,7 @@
             {
                 NamingStrategy = new CamelCaseNamingStrategy()
             },
-            Converters = new List<JsonConverter> { new StringEnumConverter { NamingStrategy = new CamelCaseNamingStrategy(), AllowIntegerValues = false } }
+            Converters = new List<JsonConverter> { new StringEnumConverter { CamelCaseText = true, AllowIntegerValues = false } }
         };
 
         private Timer timer;

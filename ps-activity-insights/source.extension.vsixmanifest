@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="ps_activity_insights.16180ab8-423d-4ecc-90cd-5bd3c98bbb94" Version="1.0" Language="en-US" Publisher="Pluralsight" />
+        <Identity Id="ps_activity_insights.16180ab8-423d-4ecc-90cd-5bd3c98bbb94" Version="1.1" Language="en-US" Publisher="Pluralsight" />
         <DisplayName>pluralsight-activity-insights</DisplayName>
         <Description xml:space="preserve">Extension for logging your time spent coding.</Description>
         <Preview>true</Preview>
